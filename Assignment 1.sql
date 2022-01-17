@@ -356,8 +356,8 @@ BEGIN CATCH
 END CATCH
 
 -- run two transaction at the same time in differnt instance
-EXEC uspTransaction 54322, 54124, 2000;
-EXEC uspTransaction_without_delay 54124, 54795, 150;
+EXEC uspTransaction 54322, 54124, 2000;EXEC uspTransaction_without_delay 54124, 54795, 150;
+
 
 -- Lastly The Durability:
 --This property ensures that once the transaction has completed execution, 
@@ -370,3 +370,139 @@ BACKUP DATABASE Training
 TO DISK = 'C:\DB BAK'
 --WITH DIFFERENTIAL
 -- A differential back up only backs up the parts of the database that have changed since the last full database backup.
+
+--Views, Temp Table. Table Variables, Comman table expression
+
+CREATE VIEW vw_customer_account
+AS
+SELECT
+	a.customer_id,
+	a.account_no,
+	c.first_name,
+	c.last_name,
+	b.amount
+FROM
+	Bank.accounts a
+	JOIN
+	Bank.customers c
+	ON
+	a.customer_id  = c.customer_id
+	JOIN 
+	Bank.account_balance b
+	ON
+	b.account_no = a.account_no
+
+SELECT * FROM vw_customer_account WHERE customer_id > 302;
+--Seved on DB available to other queries and Sp
+
+--TEMP TABLE
+SELECT
+	a.customer_id,
+	a.account_no,
+	c.first_name,
+	c.last_name,
+	b.amount
+INTO
+	#TempCustomerAccount
+FROM
+	Bank.accounts a
+	JOIN
+	Bank.customers c
+	ON
+	a.customer_id  = c.customer_id
+	JOIN 
+	Bank.account_balance b
+	ON
+	b.account_no = a.account_no
+
+SELECT * FROM #TempCustomerAccount WHERE customer_id > 302;
+
+--local temp table stored in TempDB, vissable only to the current session
+--can be shared between nested SPs
+--global temp table shared between session and get distory after last session with table connection get closed
+
+-- Table Variable
+DECLARE @TblCustomerAccount TABLE (customer_id INT, account_no INT,first_name VARCHAR (30),
+	last_name VARCHAR (30), amount BIGINT)
+
+INSERT @TblCustomerAccount
+SELECT
+	a.customer_id,
+	a.account_no,
+	c.first_name,
+	c.last_name,
+	b.amount
+FROM
+	Bank.accounts a
+	JOIN
+	Bank.customers c
+	ON
+	a.customer_id  = c.customer_id
+	JOIN 
+	Bank.account_balance b
+	ON
+	b.account_no = a.account_no
+
+SELECT * FROM @TblCustomerAccount WHERE customer_id > 302
+
+--table var also created in TempDB
+--Scope of TEMP Table is ijn the batch
+-- can be passed as parameter in SPs
+
+--Derived Table
+SELECT
+	*
+FROM	(
+			SELECT
+				a.customer_id,
+				a.account_no,
+				c.first_name,
+				c.last_name,
+				b.amount
+			FROM
+				Bank.accounts a
+				JOIN
+				Bank.customers c
+				ON
+				a.customer_id  = c.customer_id
+				JOIN 
+				Bank.account_balance b
+				ON
+				b.account_no = a.account_no
+
+		) as dtCustomerAccount
+WHERE
+	customer_id > 302;
+
+-- Only available only fro current query
+
+--CTE
+
+WITH cte_customer_account 
+AS
+(
+SELECT
+	a.customer_id,
+	a.account_no,
+	c.first_name,
+	c.last_name,
+	b.amount
+FROM
+	Bank.accounts a
+	JOIN
+	Bank.customers c
+	ON
+	a.customer_id  = c.customer_id
+	JOIN 
+	Bank.account_balance b
+	ON
+	b.account_no = a.account_no
+)
+SELECT
+	*
+FROM
+	cte_customer_account
+WHERE
+	customer_id > 302;
+
+--temporary result set defined within execution scope of a single SELECT, IINSERT, DELETE, UPDATE OR VIEW
